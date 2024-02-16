@@ -4,6 +4,7 @@ import (
 	"bytes"
 	"encoding/json"
 	"errors"
+	"log"
 	"net/http"
 )
 
@@ -18,6 +19,8 @@ type AuthPayload struct {
 }
 
 func (app *Config) Broker(w http.ResponseWriter, r *http.Request) {
+
+	log.Println("Inside Routes Broker function")
 
 	payload := jsonResponse{
 		Error:   false,
@@ -35,6 +38,8 @@ func (app *Config) Broker(w http.ResponseWriter, r *http.Request) {
 }
 
 func (app *Config) HandleSubmission(w http.ResponseWriter, r *http.Request) {
+	log.Println("Received request to /handle")
+
 	var requestPayload RequestPayload
 
 	err := app.readJSON(w, r, &requestPayload) // read the input in requestPayload
@@ -56,11 +61,11 @@ func (app *Config) HandleSubmission(w http.ResponseWriter, r *http.Request) {
 
 func (app *Config) authenticate(w http.ResponseWriter, a AuthPayload) {
 	// create some json we'll send to the auth microservice
-
+	log.Println("Inside Authenticate function")
 	jsonData, _ := json.MarshalIndent(a, "", "\t") //format json
 
 	// Create a new HTTP request to call authenticate service
-	request, err := http.NewRequest("POST", "http://authentication-service/authenticate", bytes.NewBuffer(jsonData))
+	request, err := http.NewRequest("POST", "http://localhost:8081/authenticate", bytes.NewBuffer(jsonData))
 	if err != nil {
 		app.errorJSON(w, err)
 		return

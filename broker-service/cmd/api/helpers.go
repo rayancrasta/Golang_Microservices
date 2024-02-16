@@ -13,9 +13,9 @@ type jsonResponse struct {
 	Data    any    `json:"data,omitempty"`
 }
 
-func (app *Config) readJSON(w http.ResponseWriter, r *http.Request, data any) {
+func (app *Config) readJSON(w http.ResponseWriter, r *http.Request, data any) error {
 	maxBytes := 1048576 // 1 MB
-	r.Body := http.MaxBytesReader(w, r.Body, int64(maxBytes))
+	r.Body = http.MaxBytesReader(w, r.Body, int64(maxBytes))
 
 	// Decoder
 	dec := json.NewDecoder(r.Body)
@@ -47,7 +47,7 @@ func (app *Config) writeJSON(w http.ResponseWriter, status int, data any, header
 
 	w.Header().Set("Content-Type", "application/json")
 	w.WriteHeader(status)
-	_, err := w.Write(out)
+	_, err = w.Write(out)
 
 	if err != nil {
 		return err

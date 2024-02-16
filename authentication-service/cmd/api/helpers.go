@@ -3,8 +3,11 @@ package main
 import (
 	"encoding/json"
 	"errors"
+	"fmt"
 	"io"
+	"log"
 	"net/http"
+	"strconv"
 )
 
 type jsonResponse struct {
@@ -13,9 +16,9 @@ type jsonResponse struct {
 	Data    any    `json:"data,omitempty"`
 }
 
-func (app *Config) readJSON(w http.ResponseWriter, r *http.Request, data any) {
+func (app *Config) readJSON(w http.ResponseWriter, r *http.Request, data any) error {
 	maxBytes := 1048576 // 1 MB
-	r.Body := http.MaxBytesReader(w, r.Body, int64(maxBytes))
+	r.Body = http.MaxBytesReader(w, r.Body, int64(maxBytes))
 
 	// Decoder
 	dec := json.NewDecoder(r.Body)
@@ -39,6 +42,9 @@ func (app *Config) writeJSON(w http.ResponseWriter, status int, data any, header
 		return err
 	}
 
+	fmt.Println("JSON Response Length:", len(out)) // Add this line
+	fmt.Println("JSON Response:", string(out))     // Add this line
+
 	if len(headers) > 0 {
 		for key, value := range headers[0] {
 			w.Header()[key] = value
@@ -46,11 +52,12 @@ func (app *Config) writeJSON(w http.ResponseWriter, status int, data any, header
 	}
 
 	w.Header().Set("Content-Type", "application/json")
+	w.Header().Set("Content-Length", strconv.Itoa(len(out))) // Add this line
 	w.WriteHeader(status)
-	_, err := w.Write(out)
+	_, writeErr := w.Write(out)
 
-	if err != nil {
-		return err
+	if writeErr != nil {
+		return writeErr
 	}
 
 	return nil
@@ -63,6 +70,8 @@ func (app *Config) errorJSON(w http.ResponseWriter, err error, status ...int) er
 		// status is specified
 		statusCode = status[0]
 	}
+
+	log.Println("Error:", err) // Log the actual error for debugging
 
 	var payload jsonResponse
 	payload.Error = true
