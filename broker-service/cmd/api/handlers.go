@@ -20,7 +20,7 @@ type AuthPayload struct {
 
 func (app *Config) Broker(w http.ResponseWriter, r *http.Request) {
 
-	log.Println("Inside Routes Broker function")
+	log.Println("DEBUG: Inside Routes Broker function")
 
 	payload := jsonResponse{
 		Error:   false,
@@ -38,7 +38,7 @@ func (app *Config) Broker(w http.ResponseWriter, r *http.Request) {
 }
 
 func (app *Config) HandleSubmission(w http.ResponseWriter, r *http.Request) {
-	log.Println("Received request to /handle")
+	log.Println("DEBUG: Received request to /handle")
 
 	var requestPayload RequestPayload
 
@@ -65,7 +65,7 @@ func (app *Config) authenticate(w http.ResponseWriter, a AuthPayload) {
 	jsonData, _ := json.MarshalIndent(a, "", "\t") //format json
 
 	// Create a new HTTP request to call authenticate service
-	request, err := http.NewRequest("POST", "http://localhost:8081/authenticate", bytes.NewBuffer(jsonData))
+	request, err := http.NewRequest("POST", "http://authentication-service/authenticate", bytes.NewBuffer(jsonData))
 	if err != nil {
 		app.errorJSON(w, err)
 		return
@@ -83,6 +83,7 @@ func (app *Config) authenticate(w http.ResponseWriter, a AuthPayload) {
 
 	defer response.Body.Close() //The response.Body represents the response body returned by the server. If you don't close the response body explicitly, it can lead to resource leaks, such as keeping the network connection open or consuming system resources unnecessarily.
 
+	log.Println(response.StatusCode)
 	// make sure we get back the correct status code
 	if response.StatusCode == http.StatusUnauthorized {
 		app.errorJSON(w, errors.New("invalid credentials"))

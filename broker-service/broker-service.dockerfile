@@ -17,7 +17,7 @@ FROM alpine:latest
 
 RUN mkdir /app
 
-COPY --from=builder brokerApp /app 
+COPY --from=builder /app/brokerApp /app/brokerApp
 
 CMD ["/app/brokerApp"]
 

@@ -3,12 +3,13 @@ package main
 import (
 	"errors"
 	"fmt"
+	"log"
 	"net/http"
 )
 
 func (app *Config) Authenticate(w http.ResponseWriter, r *http.Request) {
 	// Declare a variable that has same tags as in the json
-
+	log.Println("DEBUG: Inside authenticate-service Authenticate")
 	var requestPayload struct {
 		Email    string `json:"email"`
 		Password string `json:"password"`
@@ -24,13 +25,15 @@ func (app *Config) Authenticate(w http.ResponseWriter, r *http.Request) {
 	// Validate the user against the database
 	user, err := app.Models.User.GetByEmail(requestPayload.Email)
 	if err != nil {
-		app.errorJSON(w, errors.New("invalid credentials"), http.StatusBadRequest)
+		log.Println("DEBUG: Invalid Password")
+		app.errorJSON(w, errors.New("invalid email credentials"), http.StatusBadRequest)
 		return
 	}
 
 	valid, err := user.PasswordMatches(requestPayload.Password)
 	if err != nil || !valid {
-		app.errorJSON(w, errors.New("invalid credentials"), http.StatusBadRequest)
+		log.Println("DEBUG: Invalid Password")
+		app.errorJSON(w, errors.New("invalid password credentials"), http.StatusBadRequest)
 		return
 	}
 
