@@ -7,6 +7,7 @@ import (
 	"errors"
 	"log"
 	"net/http"
+	"net/rpc"
 )
 
 type RequestPayload struct {
@@ -70,7 +71,9 @@ func (app *Config) HandleSubmission(w http.ResponseWriter, r *http.Request) {
 		app.authenticate(w, requestPayload.Auth) // send the auth part of the payload (email,password)
 	case "log":
 		log.Println("DEBUG: Switch case log")
-		app.logEventViaRabbit(w, requestPayload.Log)
+		// app.logEventViaRabbit(w, requestPayload.Log)
+		app.logItemviaRPC(w, requestPayload.Log)
+
 	case "mail":
 		log.Println("DEBUG: Switch case Mail")
 		app.SendMail(w, requestPayload.Mail)
@@ -254,4 +257,39 @@ func (app *Config) pushToQueue(name, msg string) error {
 	}
 
 	return nil
+}
+
+type RPCPayload struct {
+	Name string
+	Data string
+}
+
+func (app *Config) logItemviaRPC(w http.ResponseWriter, logpayload LogPayload) {
+	client, err := rpc.Dial("tcp", "logger-service:5001") // target RPC server
+	if err != nil {
+		app.errorJSON(w, err)
+		return
+	}
+
+	// Create a type that exactly matches, the remote RPC server is expecting to get
+	rpcPayload := RPCPayload{
+		Name: logpayload.Name,
+		Data: logpayload.Data,
+	}
+
+	var result string
+	err = client.Call("RPCServer.LogInfo", // Same as defined in remote rPC server
+		rpcPayload,
+		&result)
+
+	if err != nil {
+		app.errorJSON(w, err)
+		return
+	}
+
+	var payload jsonResponse
+	payload.Error = false
+	payload.Message = result
+
+	app.writeJSON(w, http.StatusAccepted, payload) // return to webUI
 }
