@@ -1,6 +1,7 @@
 package main
 
 import (
+	"broker/event"
 	"bytes"
 	"encoding/json"
 	"errors"
@@ -69,7 +70,7 @@ func (app *Config) HandleSubmission(w http.ResponseWriter, r *http.Request) {
 		app.authenticate(w, requestPayload.Auth) // send the auth part of the payload (email,password)
 	case "log":
 		log.Println("DEBUG: Switch case log")
-		app.logItem(w, requestPayload.Log)
+		app.logEventViaRabbit(w, requestPayload.Log)
 	case "mail":
 		log.Println("DEBUG: Switch case Mail")
 		app.SendMail(w, requestPayload.Mail)
@@ -111,7 +112,6 @@ func (app *Config) logItem(w http.ResponseWriter, entry LogPayload) {
 	payload.Message = "Logged"
 
 	app.writeJSON(w, http.StatusAccepted, payload)
-
 }
 
 func (app *Config) authenticate(w http.ResponseWriter, a AuthPayload) {
@@ -217,4 +217,41 @@ func (app *Config) SendMail(w http.ResponseWriter, msg MailPayload) {
 	payload.Message = "Message sent to " + msg.To
 
 	app.writeJSON(w, http.StatusAccepted, payload)
+}
+
+func (app *Config) logEventViaRabbit(w http.ResponseWriter, logpayload LogPayload) {
+	err := app.pushToQueue(logpayload.Name, logpayload.Data)
+
+	if err != nil {
+		app.errorJSON(w, err)
+		return
+	}
+
+	var payload jsonResponse
+	payload.Error = false
+	payload.Message = "Logged via RabbitMQ"
+
+	app.writeJSON(w, http.StatusAccepted, payload) // return to webUI
+
+}
+
+func (app *Config) pushToQueue(name, msg string) error {
+	emitter, err := event.NewEventEmitter(app.Rabbit) // get amqp connection
+	if err != nil {
+		return err
+	}
+
+	payload := LogPayload{
+		Name: name,
+		Data: msg,
+	}
+
+	jsonData, _ := json.MarshalIndent(&payload, "", "\t") // get in JSON format
+	err = emitter.Push(string(jsonData), "log.INFO")      // log.INFO is severity, routing key
+
+	if err != nil {
+		return err
+	}
+
+	return nil
 }
